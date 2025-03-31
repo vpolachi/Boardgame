@@ -14,12 +14,25 @@ pipeline{
                 sh 'mvn clean package'
             }
         }
-        stage('OWASP Scan') {
-            steps {
+        //stage('OWASP Scan') {
+        //    steps {
                 // Note: 'odcInstallation' is the correct parameter name
-                dependencyCheck additionalArguments: '--scan target/ --format ALL --project "MyApp"', 
-                              odcInstallation: 'OWASP'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+          //      dependencyCheck additionalArguments: '--scan target/ --format ALL --project "MyApp"', 
+           //                   odcInstallation: 'OWASP'
+               // dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+           // }
+    //    }
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('Sonar') { // Matches Jenkins SonarQube server name
+                    sh """
+                    mvn sonar:sonar \
+                      -Dsonar.projectKey=projkey \
+                      -Dsonar.projectName='projdispname' \
+                      -Dsonar.java.binaries=target/classes \
+                      -Dsonar.sources=src/main/java
+                    """
+                }
             }
         }
     }
