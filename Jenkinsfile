@@ -41,6 +41,21 @@ pipeline{
                 }
             }
         }
+          stage("Increment Docker Tag"){
+            steps{
+                script{
+                    // Fetch the latest tag from Docker Hub
+                    def lastTag = sh(script: "curl -s https://hub.docker.com/v2/repositories/${DOCKER_HUB_USER}/${DOCKER_IMAGE}/tags | jq -r '.results[].name' | sort -V | tail -n 1", returnStdout: true).trim()
+                    
+                    // Split the tag and increment the last part
+                    def tagParts = lastTag.tokenize('.')
+                    def newTag = "cicd" + (tagParts[-1].toInteger() + 1)
+                    
+                    // Set the new tag in the environment variable
+                    env.DOCKER_TAG = newTag
+                }
+            }
+        }
         stage("Build Docker Image"){
     steps{
         script{
