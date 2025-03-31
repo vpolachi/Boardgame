@@ -54,7 +54,7 @@ pipeline{
          stage("Push Docker Image to Docker Hub"){
             steps{
                 script{
-                    withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_HUB_TOKEN')]) {
+                    withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_HUB_TOKEN')]){
                         sh """
                         echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
                         docker tag $DOCKER_IMAGE:$DOCKER_TAG $DOCKER_HUB_USER/$DOCKER_IMAGE:$DOCKER_TAG
@@ -64,5 +64,6 @@ pipeline{
                 }
             }
 
+}
 }
 }
