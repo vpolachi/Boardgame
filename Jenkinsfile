@@ -19,7 +19,7 @@ pipeline{
             steps{
                 script{
                     // Fetch the latest tag from Docker Hub
-                    def lastTag = sh(script: "curl -s https://hub.docker.com/v2/repositories/${DOCKER_HUB_USER}/${DOCKER_IMAGE}/tags?page_size=100 | jq -r '.results[].name' | grep -E '^cicd\\d+\\.\\d+$' | sort -V | tail -n 1", returnStdout: true).trim()
+                   def lastTag = sh(script: "curl -s \"https://hub.docker.com/v2/repositories/$DOCKER_HUB_USER/$DOCKER_IMAGE/tags?page_size=100\" | jq -r '.results[].name' | grep -E '^cicd[0-9]+\\.[0-9]+$' | sort -V | tail -n 1", returnStdout: true).trim()
                     
                     if (!lastTag){
                         lastTag = "cicd1.0"  // Default if no tags exist
