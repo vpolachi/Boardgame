@@ -15,25 +15,18 @@ pipeline{
                 checkout scm
             }
         }
-     stage("Increment Docker Tag"){
+    stage("Increment Docker Tag"){
     steps{
         script{
-            // Fetch the latest tag from Docker Hub
             def tagsJson = sh(script: """
                 curl -s "https://hub.docker.com/v2/repositories/${DOCKER_HUB_USER}/${DOCKER_IMAGE}/tags/?page_size=100"
             """, returnStdout: true).trim()
             
-            // Parse JSON and extract all tag names
             def tags = new groovy.json.JsonSlurper().parseText(tagsJson).results*.name
+            def lastTag = tags.findAll { it ==~ /^cicd\d+$/ } // Only matches integer versions
+                             .max()
             
-            // Filter tags starting with 'cicd' and get the highest number
-            def lastTag = tags.findAll { it.startsWith('cicd') }
-                             .collect { it.replaceAll(/^cicd/, '') }
-                             .findAll { it.isNumber() }
-                             .max { it.toInteger() }
-            
-            // Calculate new tag number
-            def nextNumber = (lastTag ? lastTag.toInteger() : 0) + 1
+            def nextNumber = (lastTag ? lastTag.replaceAll(/^cicd/, '').toInteger() : 0) + 1
             env.DOCKER_TAG = "cicd${nextNumber}"
             
             echo "Using Docker Tag: ${env.DOCKER_TAG}"
