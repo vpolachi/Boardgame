@@ -15,24 +15,30 @@ pipeline{
                 checkout scm
             }
         }
-       stage("Increment Docker Tag"){
-    steps{
-        script{
-            // Fetch the latest tag from Docker Hub
-            def lastTag = sh(script: """
-                curl -s https://hub.docker.com/v2/repositories/${DOCKER_HUB_USER}/${DOCKER_IMAGE}/tags | \
-                jq -r '.results[].name' | sort -V | tail -n 1
-            """, returnStdout: true).trim()
-            
-            // Split the tag and increment the last part
-            def tagParts = lastTag.tokenize('.')
-            def newTag = "cicd" + (tagParts[-1].toInteger() + 1)
-            
-            // Set the new tag in the environment variable
-            env.DOCKER_TAG = newTag
+      stage("Increment Docker Tag"){
+            steps{
+                script{
+                    // Fetch the latest tag from Docker Hub
+                    def lastTag = sh(script: """
+                        curl -s https://hub.docker.com/v2/repositories/${DOCKER_HUB_USER}/${DOCKER_IMAGE}/tags | \
+                        jq -r '.results[].name' | grep '^cicd' | sort -V | tail -n 1
+                    """, returnStdout: true).trim()
+
+                    // If no tags exist, start with cicd1.0
+                    if (!lastTag){
+                        env.DOCKER_TAG = 'cicd1.0'
+                    } 
+                    else {
+                        // Extract the number and increment (e.g., cicd1 → cicd2)
+                        def lastNumber = (lastTag =~ /(\d+)$/).find()?.getAt(1)?.toInteger() ?: 0
+                        env.DOCKER_TAG = "cicd${lastNumber + 1}"
+                    }
+
+                    echo "Using Docker Tag: ${env.DOCKER_TAG}"
+                }
+            }
         }
-    }
-}
+
         stage("Maven Build"){
             steps{
                 sh 'mvn clean package'
