@@ -22,9 +22,9 @@ pipeline{
                // dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
            // }
     //    }
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('Sonar') { // Matches Jenkins SonarQube server name
+        stage('SonarQube Analysis'){
+            steps{
+                withSonarQubeEnv('Sonar'){ // Matches Jenkins SonarQube server name
                     sh """
                     mvn sonar:sonar \
                       -Dsonar.projectKey=projkey \
@@ -35,5 +35,18 @@ pipeline{
                 }
             }
         }
+        stage('Quality Gate'){
+    steps{
+        script{
+            def qualityGate = waitForQualityGate()
+            if (qualityGate.status != 'OK') {
+                error "Pipeline failed due to Quality Gate failure: ${qualityGate.status}"
+            } 
+            else{
+                echo "Quality Gate passed successfully!"
+            }
+        }
     }
+}
+}
 }
