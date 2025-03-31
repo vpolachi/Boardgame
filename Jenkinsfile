@@ -3,6 +3,12 @@ pipeline{
     tools{
         maven 'maven3.9.9'
     }
+    environment{
+    DOCKER_IMAGE = 'boardgameapp'
+    DOCKER_TAG = 'cicd1.0'
+    DOCKER_HUB_USER = 'dockerr2021' // Replace with your actual Docker Hub username
+}
+
     stages{
         stage("Checkout"){
             steps{
@@ -45,6 +51,18 @@ pipeline{
         }
     }
 }
+         stage("Push Docker Image to Docker Hub"){
+            steps{
+                script{
+                    withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_HUB_TOKEN')]) {
+                        sh """
+                        echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
+                        docker tag $DOCKER_IMAGE:$DOCKER_TAG $DOCKER_HUB_USER/$DOCKER_IMAGE:$DOCKER_TAG
+                        docker push $DOCKER_HUB_USER/$DOCKER_IMAGE:$DOCKER_TAG
+                        """
+                    }
+                }
+            }
 
 }
 }
