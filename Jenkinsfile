@@ -9,8 +9,10 @@ pipeline{
         DOCKER_TAG = sh(
             script: '''
             DATE=$(date +%Y%m%d)
-            COUNT=$(docker images --filter=reference="${DOCKER_IMAGE}:${DATE}-*" --format "{{.Tag}}" | wc -l)
-            echo "${DATE}-$((COUNT + 1))"
+            # Find the highest existing number for today
+            MAX_NUM=$(docker images --filter=reference="${DOCKER_IMAGE}:${DATE}-*" --format "{{.Tag}}" | awk -F'-' '{print \$2}' | sort -n | tail -1)
+            # If no images exist for today, start with 1, otherwise increment
+            [ -z "$MAX_NUM" ] && echo "${DATE}-1" || echo "${DATE}-$((MAX_NUM + 1))"
             ''', 
             returnStdout: true
         ).trim()
