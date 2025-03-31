@@ -5,20 +5,14 @@ pipeline{
     }
     environment{
         DOCKER_IMAGE = 'boardgameapp'
-        // Generate date + sequential number (e.g., "202503311")
+        // Generate date + incremental suffix (e.g., "20250331-1")
         DOCKER_TAG = sh(
             script: '''
             DATE=$(date +%Y%m%d)
-            # Check local and remote images for existing tags
-            LOCAL_TAGS=$(docker images --filter=reference="${DOCKER_IMAGE}:${DATE}*" --format "{{.Tag}}" | grep "^${DATE}[0-9]\\+$" || true)
-            REMOTE_TAGS=$(curl -s "https://hub.docker.com/v2/repositories/${DOCKER_HUB_USER}/${DOCKER_IMAGE}/tags/" | jq -r '.results[].name' | grep "^${DATE}[0-9]\\+$" || true)
-            
-            # Combine and find the highest number
-            ALL_TAGS=$(echo -e "$LOCAL_TAGS\\n$REMOTE_TAGS" | grep . | sort -n)
-            MAX_NUM=$(echo "$ALL_TAGS" | tail -1 | sed "s/^${DATE}//")
-            
-            # If no tags exist for today, start with 1, otherwise increment
-            [ -z "$MAX_NUM" ] && echo "${DATE}1" || echo "${DATE}$((MAX_NUM + 1))"
+            # Find the highest existing number for today
+            MAX_NUM=$(docker images --filter=reference="${DOCKER_IMAGE}:${DATE}-*" --format "{{.Tag}}" | awk -F'-' '{print \$2}' | sort -n | tail -1)
+            # If no images exist for today, start with 1, otherwise increment
+            [ -z "$MAX_NUM" ] && echo "${DATE}-1" || echo "${DATE}-$((MAX_NUM + 1))"
             ''', 
             returnStdout: true
         ).trim()
@@ -39,7 +33,7 @@ pipeline{
         }
 
         stage('SonarQube Analysis'){
-            steps{
+            steps {
                 withSonarQubeEnv('Sonar'){
                     sh """
                     mvn sonar:sonar \
@@ -55,6 +49,7 @@ pipeline{
         stage("Build Docker Image"){
             steps{
                 script{
+                    // Build with only the date-incremental tag
                     sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
                 }
             }
