@@ -48,5 +48,16 @@ pipeline{
         }
     }
 }
+        stage("Build Docker Image"){
+    steps{
+        script{
+            def imageName = "boardgameapp"  
+            def imageTag = "cicd1.0"  
+
+            sh "docker build -t $imageName:$imageTag ."
+        }
+    }
+}
+
 }
 }
