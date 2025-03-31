@@ -4,10 +4,10 @@ pipeline{
         maven 'maven3.9.9'
     }
     environment{
-    DOCKER_IMAGE = 'boardgameapp'
-    DOCKER_TAG = 'cicd1.0'
-    DOCKER_HUB_USER = 'dockerr2021' // Replace with your actual Docker Hub username
-}
+        DOCKER_IMAGE = 'boardgameapp'
+        DOCKER_TAG = "cicd${env.BUILD_NUMBER}"  // CHANGED: Auto-incrementing tag based on build number
+        DOCKER_HUB_USER = 'dockerr2021'
+    }
 
     stages{
         stage("Checkout"){
@@ -15,41 +15,16 @@ pipeline{
                 checkout scm
             }
         }
-    stage("Increment Docker Tag"){
-    steps{
-        script{
-            def tagsJson = sh(script: """
-                curl -s "https://hub.docker.com/v2/repositories/${DOCKER_HUB_USER}/${DOCKER_IMAGE}/tags/?page_size=100"
-            """, returnStdout: true).trim()
-            
-            def tags = new groovy.json.JsonSlurper().parseText(tagsJson).results*.name
-            def lastTag = tags.findAll { it ==~ /^cicd\d+$/ } // Only matches integer versions
-                             .max()
-            
-            def nextNumber = (lastTag ? lastTag.replaceAll(/^cicd/, '').toInteger() : 0) + 1
-            env.DOCKER_TAG = "cicd${nextNumber}"
-            
-            echo "Using Docker Tag: ${env.DOCKER_TAG}"
-        }
-    }
-}
 
         stage("Maven Build"){
             steps{
                 sh 'mvn clean package'
             }
         }
-        //stage('OWASP Scan') {
-        //    steps {
-                // Note: 'odcInstallation' is the correct parameter name
-          //      dependencyCheck additionalArguments: '--scan target/ --format ALL --project "MyApp"', 
-           //                   odcInstallation: 'OWASP'
-               // dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-           // }
-    //    }
+
         stage('SonarQube Analysis'){
-            steps{
-                withSonarQubeEnv('Sonar'){ // Matches Jenkins SonarQube server name
+            steps {
+                withSonarQubeEnv('Sonar'){
                     sh """
                     mvn sonar:sonar \
                       -Dsonar.projectKey=projkey \
@@ -60,29 +35,28 @@ pipeline{
                 }
             }
         }
-        stage("Build Docker Image"){
-    steps{
-        script{
-            def imageName = "boardgameapp"  
-            def imageTag = "cicd1.0"  
 
-            sh "docker build -t $imageName:$imageTag ."
+        stage("Build Docker Image"){
+            steps{
+                script{
+                    // CHANGED: Using environment variables instead of hardcoded values
+                    sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                }
+            }
         }
-    }
-}
-         stage("Push Docker Image to Docker Hub"){
+
+        stage("Push Docker Image to Docker Hub"){
             steps{
                 script{
                     withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_HUB_TOKEN')]){
                         sh """
                         echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
-                        docker tag $DOCKER_IMAGE:$DOCKER_TAG $DOCKER_HUB_USER/$DOCKER_IMAGE:$DOCKER_TAG
-                        docker push $DOCKER_HUB_USER/$DOCKER_IMAGE:$DOCKER_TAG
+                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:${DOCKER_TAG}  // CHANGED: Consistent tagging
+                        docker push ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:${DOCKER_TAG}
                         """
                     }
                 }
             }
-
-}
-}
+        }
+    }
 }
