@@ -15,8 +15,8 @@ pipeline{
                 sh 'mvn clean package'
             }
         }
-        stage('OWASP') {
-            steps {
+        stage('OWASP'){
+            steps{
                 // Scan compiled artifacts in 'target/'
                 dependencyCheck additionalArguments: '--scan target/ --format All', odcInstallation: 'OWASP'             
                 // Publish results to Jenkins UI
