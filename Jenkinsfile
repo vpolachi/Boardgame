@@ -1,30 +1,30 @@
-pipeline{
+pipeline {
     agent any
-    tools{
+    tools {
         maven 'maven3.9.9'
     }
-    environment{
+    environment {
         DOCKER_IMAGE = 'boardgameapp'
-        DOCKER_TAG = 'latest'  // Static tag name
+        DOCKER_TAG_DATE = sh(script: 'date +%Y%m%d', returnStdout: true).trim()  // Only date (e.g., "20240316")
         DOCKER_HUB_USER = 'dockerr2021'
     }
 
-    stages{
-        stage("Checkout"){
+    stages {
+        stage("Checkout") {
             steps {
                 checkout scm
             }
         }
 
-        stage("Maven Build"){
-            steps{
+        stage("Maven Build") {
+            steps {
                 sh 'mvn clean package'
             }
         }
 
-        stage('SonarQube Analysis'){
+        stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('Sonar'){
+                withSonarQubeEnv('Sonar') {
                     sh """
                     mvn sonar:sonar \
                       -Dsonar.projectKey=projkey \
@@ -36,20 +36,25 @@ pipeline{
             }
         }
 
-        stage("Build Docker Image"){
-            steps{
-                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+        stage("Build Docker Image") {
+            steps {
+                script {
+                    // Build with both date tag and latest tag
+                    sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG_DATE} -t ${DOCKER_IMAGE}:latest ."
+                }
             }
         }
 
-        stage("Push Docker Image to Docker Hub"){
-            steps{
-                script{
-                    withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_HUB_TOKEN')]){
+        stage("Push Docker Image to Docker Hub") {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_HUB_TOKEN')]) {
                         sh '''
                         echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USER" --password-stdin
-                        docker tag "${DOCKER_IMAGE}:${DOCKER_TAG}" "${DOCKER_HUB_USER}/${DOCKER_IMAGE}:${DOCKER_TAG}"
-                        docker push "${DOCKER_HUB_USER}/${DOCKER_IMAGE}:${DOCKER_TAG}"
+                        docker tag "${DOCKER_IMAGE}:${DOCKER_TAG_DATE}" "${DOCKER_HUB_USER}/${DOCKER_IMAGE}:${DOCKER_TAG_DATE}"
+                        docker tag "${DOCKER_IMAGE}:latest" "${DOCKER_HUB_USER}/${DOCKER_IMAGE}:latest"
+                        docker push "${DOCKER_HUB_USER}/${DOCKER_IMAGE}:${DOCKER_TAG_DATE}"
+                        docker push "${DOCKER_HUB_USER}/${DOCKER_IMAGE}:latest"
                         '''
                     }
                 }
