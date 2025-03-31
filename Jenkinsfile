@@ -2,7 +2,6 @@ pipeline{
     agent any
     tools{
         maven 'maven3.9.9'
-        dependency-check 'OWASP'
     }
     stages{
         stage("Checkout"){
