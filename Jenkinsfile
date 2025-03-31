@@ -18,7 +18,7 @@ pipeline{
                 if [ -z "$MAX_NUM" ]; then
                     echo "${DATE}1"
                 else
-                    echo "${DATE}$((MAX_NUM + 1))"
+                    echo "${DATE}$((MAX_NUM + 2))"
                 fi
             ''', 
             returnStdout: true
