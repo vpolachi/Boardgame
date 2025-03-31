@@ -5,7 +5,7 @@ pipeline{
     }
     environment{
         DOCKER_IMAGE = 'boardgameapp'
-        DOCKER_TAG = "cicd${env.BUILD_NUMBER}"  // CHANGED: Auto-incrementing tag based on build number
+        DOCKER_TAG = "cicd${env.BUILD_NUMBER}"
         DOCKER_HUB_USER = 'dockerr2021'
     }
 
@@ -23,7 +23,7 @@ pipeline{
         }
 
         stage('SonarQube Analysis'){
-            steps {
+            steps{
                 withSonarQubeEnv('Sonar'){
                     sh """
                     mvn sonar:sonar \
@@ -39,7 +39,6 @@ pipeline{
         stage("Build Docker Image"){
             steps{
                 script{
-                    // CHANGED: Using environment variables instead of hardcoded values
                     sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
                 }
             }
@@ -48,12 +47,16 @@ pipeline{
         stage("Push Docker Image to Docker Hub"){
             steps{
                 script{
-                    withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_HUB_TOKEN')]){
-                        sh """
-                        echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
-                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:${DOCKER_TAG}  // CHANGED: Consistent tagging
-                        docker push ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:${DOCKER_TAG}
-                        """
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker-hub-token',
+                        usernameVariable: 'DOCKER_HUB_USERNAME',
+                        passwordVariable: 'DOCKER_HUB_TOKEN'
+                    )]) {
+                        sh '''
+                        echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+                        docker tag "${DOCKER_IMAGE}:${DOCKER_TAG}" "${DOCKER_HUB_USERNAME}/${DOCKER_IMAGE}:${DOCKER_TAG}"
+                        docker push "${DOCKER_HUB_USERNAME}/${DOCKER_IMAGE}:${DOCKER_TAG}"
+                        '''
                     }
                 }
             }
