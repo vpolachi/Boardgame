@@ -2,7 +2,7 @@ pipeline{
     agent any
     tools{
         maven 'maven3.9.9'
-        dependency-check 'OWASP'
+        dependencyCheck 'OWASP'
     }
     stages{
         stage("Checkout"){
@@ -15,14 +15,13 @@ pipeline{
                 sh 'mvn clean package'
             }
         }
-        stage('OWASP'){
-            steps{
-                // Scan compiled artifacts in 'target/'
-                dependencyCheck additionalArguments: '--scan target/ --format All', odcInstallation: 'OWASP'             
-                // Publish results to Jenkins UI
+        stage('OWASP Scan') {
+            steps {
+                // Note: 'odcInstallation' is the correct parameter name
+                dependencyCheck additionalArguments: '--scan target/ --format ALL --project "MyApp"', 
+                              odcInstallation: 'OWASP'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
     }
 }
-       
